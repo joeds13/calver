@@ -34,12 +34,19 @@ pub fn update_image_in_content(content: &str, image: &str, tag: &str) -> Result<
     // Pattern 2 & 3: single-line replacements
     let ref_re = Regex::new(r#"(ref=)[^\s"'&>]+"#)?;
     let tag_re = Regex::new(&format!(r#"({}:)[^\s"',\]}}]+"#, regex::escape(image)))?;
+    // Strip the registry prefix so "ghcr.io/owner/repo" also matches resource
+    // URLs like "https://github.com/owner/repo/k8s?ref=..." where only the
+    // owner/repo portion appears.
+    let image_repo = image.find('/').map(|i| &image[i + 1..]).unwrap_or("");
 
     for line in &mut lines {
-        if !line.contains(image) {
+        let has_image = line.contains(image);
+        let has_repo = !image_repo.is_empty() && line.contains(image_repo);
+
+        if !has_image && !has_repo {
             continue;
         }
-        // Pattern 2: ref= on a line that also mentions the image
+        // Pattern 2: ref= on a line mentioning the image or its owner/repo path
         if line.contains("ref=") {
             let new = ref_re.replace_all(line, format!("${{1}}{tag}")).to_string();
             if new != *line {
@@ -47,8 +54,8 @@ pub fn update_image_in_content(content: &str, image: &str, tag: &str) -> Result<
                 changed = true;
             }
         }
-        // Pattern 3: image:oldtag inline
-        if tag_re.is_match(line) {
+        // Pattern 3: image:oldtag inline (requires exact image name)
+        if has_image && tag_re.is_match(line) {
             let new = tag_re.replace_all(line, format!("${{1}}{tag}")).to_string();
             if new != *line {
                 *line = new;
@@ -200,6 +207,23 @@ resources:
             update_image_in_content(content, "ghcr.io/owner/app", "2026.4").unwrap();
         assert!(changed);
         assert!(updated.contains("ref=2026.4"));
+    }
+
+    #[test]
+    fn kustomize_resource_github_ref() {
+        let content = "\
+resources:
+  - https://github.com/owner/app/k8s?ref=2026.1
+  - externalsecret.yaml
+";
+        let (updated, changed) =
+            update_image_in_content(content, "ghcr.io/owner/app", "2026.4").unwrap();
+        assert!(changed);
+        assert!(updated.contains("ref=2026.4"));
+        assert!(
+            updated.contains("externalsecret.yaml"),
+            "other resources unchanged"
+        );
     }
 
     #[test]
