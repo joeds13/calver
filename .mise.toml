@@ -20,6 +20,10 @@ run = "cargo test"
 [tasks.release]
 run = "cargo build --release"
 
+[tasks."release:run"]
+run = "./target/release/calver"
+depends = ["release"]
+
 [tasks.lint]
 run = "cargo clippy -- -D warnings"
 
