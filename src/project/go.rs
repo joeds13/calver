@@ -56,6 +56,12 @@ impl ProjectFile for GoFile {
     }
 }
 
+pub fn is_version_file(path: &Path) -> bool {
+    std::fs::read_to_string(path)
+        .map(|c| c.lines().any(|l| parse_version_line(l).is_some()))
+        .unwrap_or(false)
+}
+
 fn parse_version_line(line: &str) -> Option<AnnoVer> {
     let rest = line.trim().strip_prefix("Version")?;
     // Must be followed by optional whitespace then '='
