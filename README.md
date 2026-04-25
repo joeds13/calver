@@ -77,7 +77,7 @@ annover deploy --image ghcr.io/owner/app --tag 2026.4 --file apps/myapp/kustomiz
 ```toml
 # mise.toml
 [tools]
-"ubi:joeds13/annover" = "latest"
+"github:joeds13/annover" = "latest"
 ```
 
 **Cargo**:

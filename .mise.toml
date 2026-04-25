@@ -46,9 +46,9 @@ run = "npx -y actions-up -y"
 #   [tools]
 #   "cargo:annover" = "latest"
 #
-# Option 2 — ubi (GitHub releases binary, fastest):
+# Option 2 — github (GitHub releases binary, fastest):
 #   [tools]
-#   "ubi:jstringer/annover" = "latest"
+#   "github:joeds13/annover" = "latest"
 #
 # Option 3 — local cargo install during development:
 #   [tools]
