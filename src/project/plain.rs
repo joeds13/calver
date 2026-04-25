@@ -1,11 +1,11 @@
 use anyhow::Result;
 use std::path::{Path, PathBuf};
 
-use crate::version::CalVer;
+use crate::version::AnnoVer;
 
 use super::ProjectFile;
 
-/// Plain text file containing only a version string (e.g. `.calver` or `VERSION`).
+/// Plain text file containing only a version string (e.g. `.annover` or `VERSION`).
 #[derive(Debug)]
 pub struct PlainFile {
     path: PathBuf,
@@ -22,12 +22,12 @@ impl ProjectFile for PlainFile {
         &self.path
     }
 
-    fn current_version(&self) -> Result<Option<CalVer>> {
+    fn current_version(&self) -> Result<Option<AnnoVer>> {
         let raw = std::fs::read_to_string(&self.path)?;
-        Ok(CalVer::parse(raw.trim()))
+        Ok(AnnoVer::parse(raw.trim()))
     }
 
-    fn update_version(&self, version: &CalVer) -> Result<()> {
+    fn update_version(&self, version: &AnnoVer) -> Result<()> {
         std::fs::write(&self.path, format!("{version}\n"))?;
         Ok(())
     }

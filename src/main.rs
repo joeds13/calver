@@ -5,8 +5,8 @@ use std::path::PathBuf;
 
 #[derive(Parser)]
 #[command(
-    name = "calver",
-    about = "Convention-based CalVer versioning for code projects",
+    name = "annover",
+    about = "Convention-based AnnoVer versioning for code projects",
     version
 )]
 struct Cli {
@@ -102,7 +102,7 @@ fn main() -> Result<()> {
 fn check_working_tree_clean() -> Result<()> {
     use std::io::{IsTerminal, Write};
 
-    let dirty = calver::git::dirty_files()?;
+    let dirty = annover::git::dirty_files()?;
     if dirty.is_empty() {
         return Ok(());
     }
@@ -150,21 +150,21 @@ fn cmd_bump(args: BumpArgs) -> Result<()> {
         check_working_tree_clean()?;
     }
 
-    let branch = calver::git::current_branch()?;
-    let next = calver::compute_next_version()?;
+    let branch = annover::git::current_branch()?;
+    let next = annover::compute_next_version()?;
 
     println!(
         "{} {} → {}  (branch: {})",
-        "calver".bold(),
+        "annover".bold(),
         "bump".cyan(),
         next.to_string().green().bold(),
         branch.dimmed()
     );
 
-    let project_files = calver::project::detect_all(&cwd);
+    let project_files = annover::project::detect_all(&cwd);
     if project_files.is_empty() {
         eprintln!(
-            "{} no project files found (Cargo.toml, package.json, pyproject.toml, Chart.yaml, .calver, VERSION)",
+            "{} no project files found (Cargo.toml, package.json, pyproject.toml, Chart.yaml, .annover, VERSION)",
             "warning:".yellow()
         );
     }
@@ -186,21 +186,21 @@ fn cmd_bump(args: BumpArgs) -> Result<()> {
     let msg = args
         .message
         .unwrap_or_else(|| format!("chore: bump version to {next}"));
-    calver::git::create_commit(&msg)?;
-    calver::git::create_tag(&next)?;
+    annover::git::create_commit(&msg)?;
+    annover::git::create_tag(&next)?;
     println!("  committed and tagged {}", next.to_string().green());
 
     if push {
-        calver::git::push_branch()?;
-        calver::git::push_tag(&next)?;
+        annover::git::push_branch()?;
+        annover::git::push_tag(&next)?;
         println!("  pushed branch and tag to origin");
 
         if !args.no_release {
-            if let Some(token) = calver::github::resolve_token() {
-                match calver::git::repo_info() {
+            if let Some(token) = annover::github::resolve_token() {
+                match annover::git::repo_info() {
                     Ok((owner, repo)) => {
                         let body = release_body(&next);
-                        match calver::github::create_release(&owner, &repo, &next, &token, &body) {
+                        match annover::github::create_release(&owner, &repo, &next, &token, &body) {
                             Ok(url) => println!("  release created: {}", url.cyan()),
                             Err(e) => eprintln!("{} creating release: {e}", "warning:".yellow()),
                         }
@@ -220,7 +220,7 @@ fn cmd_bump(args: BumpArgs) -> Result<()> {
     Ok(())
 }
 
-fn release_body(version: &calver::CalVer) -> String {
+fn release_body(version: &annover::AnnoVer) -> String {
     if version.is_dev() {
         format!("Pre-release build `{version}` from a feature branch.")
     } else {
@@ -231,7 +231,7 @@ fn release_body(version: &calver::CalVer) -> String {
 // ── current ──────────────────────────────────────────────────────────────────
 
 fn cmd_current() -> Result<()> {
-    match calver::current_version()? {
+    match annover::current_version()? {
         Some(v) => println!("{v}"),
         None => println!("{}", "no version tags found".dimmed()),
     }
@@ -241,7 +241,7 @@ fn cmd_current() -> Result<()> {
 // ── next ─────────────────────────────────────────────────────────────────────
 
 fn cmd_next() -> Result<()> {
-    let next = calver::compute_next_version()?;
+    let next = annover::compute_next_version()?;
     println!("{next}");
     Ok(())
 }
@@ -254,7 +254,7 @@ fn cmd_deploy(args: DeployArgs) -> Result<()> {
 
     println!(
         "{} {} → {}:{}",
-        "calver".bold(),
+        "annover".bold(),
         "deploy".cyan(),
         args.image.dimmed(),
         args.tag.green().bold(),
@@ -270,7 +270,7 @@ fn cmd_deploy(args: DeployArgs) -> Result<()> {
             let content = std::fs::read_to_string(path)
                 .with_context(|| format!("reading {}", path.display()))?;
             let (updated, changed) =
-                calver::gitops::update_image_in_content(&content, &args.image, &args.tag)?;
+                annover::gitops::update_image_in_content(&content, &args.image, &args.tag)?;
             if !changed {
                 anyhow::bail!(
                     "no references to '{}' found in {}",
@@ -282,7 +282,7 @@ fn cmd_deploy(args: DeployArgs) -> Result<()> {
             vec![path.clone()]
         }
         None => {
-            let files = calver::gitops::update_files_in_dir(&cwd, &args.image, &args.tag)?;
+            let files = annover::gitops::update_files_in_dir(&cwd, &args.image, &args.tag)?;
             if files.is_empty() {
                 anyhow::bail!(
                     "no YAML files containing '{}' found under {}",
@@ -301,11 +301,11 @@ fn cmd_deploy(args: DeployArgs) -> Result<()> {
     let msg = args
         .message
         .unwrap_or_else(|| format!("chore: deploy {}:{}", args.image, args.tag));
-    calver::git::create_commit(&msg)?;
+    annover::git::create_commit(&msg)?;
     println!("  committed");
 
     if push {
-        calver::git::push_branch()?;
+        annover::git::push_branch()?;
         println!("  pushed to origin");
     }
 

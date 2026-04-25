@@ -3,16 +3,16 @@ use chrono::Datelike;
 use regex::Regex;
 use std::fmt;
 
-/// A CalVer version in the form `<year>.<int>` or `<year>.<int>-dev<int>`.
+/// A AnnoVer version in the form `<year>.<int>` or `<year>.<int>-dev<int>`.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct CalVer {
+pub struct AnnoVer {
     pub year: u32,
     pub increment: u32,
     /// Present on non-main branch builds.
     pub dev: Option<u32>,
 }
 
-impl CalVer {
+impl AnnoVer {
     pub fn new(year: u32, increment: u32, dev: Option<u32>) -> Self {
         Self {
             year,
@@ -34,7 +34,7 @@ impl CalVer {
     }
 
     pub fn parse_required(s: &str) -> Result<Self> {
-        Self::parse(s).ok_or_else(|| anyhow!("invalid calver string: {s}"))
+        Self::parse(s).ok_or_else(|| anyhow!("invalid annover string: {s}"))
     }
 
     pub fn is_dev(&self) -> bool {
@@ -51,7 +51,7 @@ impl CalVer {
     }
 
     /// Next release version given the latest release tag on main.
-    pub fn next_main(latest: Option<&CalVer>) -> Self {
+    pub fn next_main(latest: Option<&AnnoVer>) -> Self {
         let year = Self::current_year();
         match latest {
             None => Self::new(year, 1, None),
@@ -64,13 +64,13 @@ impl CalVer {
     ///
     /// `base` is what the next main release will be.
     /// `latest_dev` is the highest dev tag already existing for that base.
-    pub fn next_dev(base: &CalVer, latest_dev: Option<&CalVer>) -> Self {
+    pub fn next_dev(base: &AnnoVer, latest_dev: Option<&AnnoVer>) -> Self {
         let dev_n = latest_dev.and_then(|v| v.dev).map(|n| n + 1).unwrap_or(1);
         Self::new(base.year, base.increment, Some(dev_n))
     }
 }
 
-impl fmt::Display for CalVer {
+impl fmt::Display for AnnoVer {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self.dev {
             None => write!(f, "{}.{}", self.year, self.increment),
@@ -80,7 +80,7 @@ impl fmt::Display for CalVer {
 }
 
 // release > any dev of same base; dev versions ordered by dev number
-impl Ord for CalVer {
+impl Ord for AnnoVer {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
         use std::cmp::Ordering::*;
         self.year
@@ -95,7 +95,7 @@ impl Ord for CalVer {
     }
 }
 
-impl PartialOrd for CalVer {
+impl PartialOrd for AnnoVer {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
         Some(self.cmp(other))
     }
@@ -107,7 +107,7 @@ mod tests {
 
     #[test]
     fn parse_release() {
-        let v = CalVer::parse("2026.3").unwrap();
+        let v = AnnoVer::parse("2026.3").unwrap();
         assert_eq!(v.year, 2026);
         assert_eq!(v.increment, 3);
         assert_eq!(v.dev, None);
@@ -115,33 +115,33 @@ mod tests {
 
     #[test]
     fn parse_dev() {
-        let v = CalVer::parse("2026.3-dev2").unwrap();
+        let v = AnnoVer::parse("2026.3-dev2").unwrap();
         assert_eq!(v.dev, Some(2));
     }
 
     #[test]
     fn parse_v_prefix() {
-        assert!(CalVer::parse("v2026.3").is_some());
+        assert!(AnnoVer::parse("v2026.3").is_some());
     }
 
     #[test]
     fn display() {
-        assert_eq!(CalVer::new(2026, 3, None).to_string(), "2026.3");
-        assert_eq!(CalVer::new(2026, 3, Some(1)).to_string(), "2026.3-dev1");
+        assert_eq!(AnnoVer::new(2026, 3, None).to_string(), "2026.3");
+        assert_eq!(AnnoVer::new(2026, 3, Some(1)).to_string(), "2026.3-dev1");
     }
 
     #[test]
     fn ordering() {
-        let release = CalVer::new(2026, 4, None);
-        let dev = CalVer::new(2026, 4, Some(99));
+        let release = AnnoVer::new(2026, 4, None);
+        let dev = AnnoVer::new(2026, 4, Some(99));
         assert!(release > dev);
     }
 
     #[test]
     fn next_main_new_year() {
-        let latest = CalVer::new(2025, 10, None);
-        let next = CalVer::next_main(Some(&latest));
-        assert_eq!(next.year, CalVer::current_year());
+        let latest = AnnoVer::new(2025, 10, None);
+        let next = AnnoVer::next_main(Some(&latest));
+        assert_eq!(next.year, AnnoVer::current_year());
         assert_eq!(next.increment, 1);
     }
 }

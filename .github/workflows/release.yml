@@ -17,16 +17,16 @@ jobs:
         include:
           - os: ubuntu-latest
             target: x86_64-unknown-linux-musl
-            artifact: calver
+            artifact: annover
           - os: ubuntu-latest
             target: aarch64-unknown-linux-musl
-            artifact: calver
+            artifact: annover
           - os: macos-latest
             target: x86_64-apple-darwin
-            artifact: calver
+            artifact: annover
           - os: macos-latest
             target: aarch64-apple-darwin
-            artifact: calver
+            artifact: annover
 
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -57,9 +57,9 @@ jobs:
       - name: Package
         run: |
           TAG="${{ github.ref_name }}"
-          ARCHIVE="calver-${TAG}-${{ matrix.target }}.tar.gz"
-          cp target/${{ matrix.target }}/release/calver .
-          tar -czf "${ARCHIVE}" calver
+          ARCHIVE="annover-${TAG}-${{ matrix.target }}.tar.gz"
+          cp target/${{ matrix.target }}/release/annover .
+          tar -czf "${ARCHIVE}" annover
           echo "ARCHIVE=${ARCHIVE}" >> $GITHUB_ENV
 
       - name: Upload artifact

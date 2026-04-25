@@ -2,18 +2,18 @@ use anyhow::Result;
 use serde::Deserialize;
 use std::path::{Path, PathBuf};
 
-const CONFIG_FILE: &str = ".calver.toml";
+const CONFIG_FILE: &str = ".annover.toml";
 
 #[derive(Debug, Default, Deserialize)]
 #[serde(default)]
-pub struct CalVerConfig {
+pub struct AnnoVerConfig {
     pub deploy: Vec<DeployTarget>,
 }
 
 /// A gitops deploy target — maps an app name to the file and key to update.
 #[derive(Debug, Deserialize)]
 pub struct DeployTarget {
-    /// Logical app name, matched by `calver deploy --app <name>`.
+    /// Logical app name, matched by `annover deploy --app <name>`.
     pub app: String,
     /// Path (relative to repo root) of the file containing the version.
     pub file: PathBuf,
@@ -24,8 +24,8 @@ pub struct DeployTarget {
     pub prefix: String,
 }
 
-impl CalVerConfig {
-    /// Load config from `.calver.toml` in `dir`, returning a default config if absent.
+impl AnnoVerConfig {
+    /// Load config from `.annover.toml` in `dir`, returning a default config if absent.
     pub fn load(dir: &Path) -> Result<Self> {
         let path = dir.join(CONFIG_FILE);
         if !path.exists() {

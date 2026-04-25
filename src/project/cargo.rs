@@ -1,7 +1,7 @@
 use anyhow::{Context, Result};
 use std::path::{Path, PathBuf};
 
-use crate::version::CalVer;
+use crate::version::AnnoVer;
 
 use super::ProjectFile;
 
@@ -21,7 +21,7 @@ impl ProjectFile for CargoFile {
         &self.path
     }
 
-    fn current_version(&self) -> Result<Option<CalVer>> {
+    fn current_version(&self) -> Result<Option<AnnoVer>> {
         let raw = std::fs::read_to_string(&self.path)?;
         let doc: toml_edit::DocumentMut = raw.parse().context("invalid Cargo.toml")?;
         let ver = doc
@@ -30,11 +30,11 @@ impl ProjectFile for CargoFile {
             .and_then(|v| v.as_str())
             // Cargo requires semver, so strip the mandatory `.0` patch suffix before parsing.
             .map(|s| s.strip_suffix(".0").unwrap_or(s))
-            .and_then(CalVer::parse);
+            .and_then(AnnoVer::parse);
         Ok(ver)
     }
 
-    fn update_version(&self, version: &CalVer) -> Result<()> {
+    fn update_version(&self, version: &AnnoVer) -> Result<()> {
         let raw = std::fs::read_to_string(&self.path)?;
         let mut doc: toml_edit::DocumentMut = raw.parse().context("invalid Cargo.toml")?;
         // Cargo requires three-component semver; append `.0` as the patch version.

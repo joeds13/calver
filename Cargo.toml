@@ -1,18 +1,18 @@
 [package]
-name = "calver"
+name = "annover"
 version = "2026.7.0"
 edition = "2021"
-description = "Convention-based CalVer versioning CLI for code projects"
+description = "Convention-based AnnoVer versioning CLI for code projects"
 license = "MIT"
-keywords = ["versioning", "calver", "semver", "release", "cli"]
+keywords = ["versioning", "annover", "semver", "release", "cli"]
 categories = ["command-line-utilities", "development-tools"]
 
 [lib]
-name = "calver"
+name = "annover"
 path = "src/lib.rs"
 
 [[bin]]
-name = "calver"
+name = "annover"
 path = "src/main.rs"
 
 [dependencies]

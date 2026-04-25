@@ -9,8 +9,8 @@ fnox-env = "https://github.com/jdx/mise-env-fnox"
 [env]
 _.fnox-env = { tools = true }
 
-# Dev environment for working on calver itself.
-# To install calver *into your project*, see the usage section below.
+# Dev environment for working on annover itself.
+# To install annover *into your project*, see the usage section below.
 
 [tasks.build]
 run = "cargo build"
@@ -22,7 +22,7 @@ run = "cargo test"
 run = "cargo build --release"
 
 [tasks."release:run"]
-run = "./target/release/calver"
+run = "./target/release/annover"
 depends = ["release"]
 
 [tasks.lint]
@@ -40,16 +40,16 @@ run = "prek run --all-files"
 [tasks.actions-up]
 run = "npx -y actions-up -y"
 
-# ── Installing calver in your project ────────────────────────────────────────
+# ── Installing annover in your project ────────────────────────────────────────
 #
 # Option 1 — cargo (from crates.io once published):
 #   [tools]
-#   "cargo:calver" = "latest"
+#   "cargo:annover" = "latest"
 #
 # Option 2 — ubi (GitHub releases binary, fastest):
 #   [tools]
-#   "ubi:jstringer/calver" = "latest"
+#   "ubi:jstringer/annover" = "latest"
 #
 # Option 3 — local cargo install during development:
 #   [tools]
-#   "cargo:calver" = { path = "/path/to/calver" }
+#   "cargo:annover" = { path = "/path/to/annover" }

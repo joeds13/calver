@@ -1,7 +1,7 @@
 use anyhow::{Context, Result};
 use std::path::{Path, PathBuf};
 
-use crate::version::CalVer;
+use crate::version::AnnoVer;
 
 use super::ProjectFile;
 
@@ -21,7 +21,7 @@ impl ProjectFile for PythonFile {
         &self.path
     }
 
-    fn current_version(&self) -> Result<Option<CalVer>> {
+    fn current_version(&self) -> Result<Option<AnnoVer>> {
         let raw = std::fs::read_to_string(&self.path)?;
         let doc: toml_edit::DocumentMut = raw.parse().context("invalid pyproject.toml")?;
         // PEP 621 [project.version] takes priority, then [tool.poetry.version]
@@ -34,11 +34,11 @@ impl ProjectFile for PythonFile {
                     .and_then(|p| p.get("version"))
             })
             .and_then(|v| v.as_str())
-            .and_then(CalVer::parse);
+            .and_then(AnnoVer::parse);
         Ok(ver)
     }
 
-    fn update_version(&self, version: &CalVer) -> Result<()> {
+    fn update_version(&self, version: &AnnoVer) -> Result<()> {
         let raw = std::fs::read_to_string(&self.path)?;
         let mut doc: toml_edit::DocumentMut = raw.parse().context("invalid pyproject.toml")?;
         let ver_str = version.to_string();

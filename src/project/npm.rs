@@ -1,7 +1,7 @@
 use anyhow::{Context, Result};
 use std::path::{Path, PathBuf};
 
-use crate::version::CalVer;
+use crate::version::AnnoVer;
 
 use super::ProjectFile;
 
@@ -21,14 +21,14 @@ impl ProjectFile for NpmFile {
         &self.path
     }
 
-    fn current_version(&self) -> Result<Option<CalVer>> {
+    fn current_version(&self) -> Result<Option<AnnoVer>> {
         let raw = std::fs::read_to_string(&self.path)?;
         let json: serde_json::Value = serde_json::from_str(&raw).context("invalid package.json")?;
-        let ver = json["version"].as_str().and_then(CalVer::parse);
+        let ver = json["version"].as_str().and_then(AnnoVer::parse);
         Ok(ver)
     }
 
-    fn update_version(&self, version: &CalVer) -> Result<()> {
+    fn update_version(&self, version: &AnnoVer) -> Result<()> {
         let raw = std::fs::read_to_string(&self.path)?;
         let mut json: serde_json::Value =
             serde_json::from_str(&raw).context("invalid package.json")?;

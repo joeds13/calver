@@ -1,7 +1,7 @@
 use anyhow::{Context, Result};
 use serde::Serialize;
 
-use crate::version::CalVer;
+use crate::version::AnnoVer;
 
 #[derive(Serialize)]
 struct CreateReleaseRequest<'a> {
@@ -18,7 +18,7 @@ struct CreateReleaseRequest<'a> {
 pub fn create_release(
     owner: &str,
     repo: &str,
-    version: &CalVer,
+    version: &AnnoVer,
     token: &str,
     body: &str,
 ) -> Result<String> {
@@ -36,7 +36,7 @@ pub fn create_release(
 
     let response = ureq::post(&url)
         .set("Authorization", &format!("token {token}"))
-        .set("User-Agent", "calver-cli")
+        .set("User-Agent", "annover-cli")
         .set("Accept", "application/vnd.github.v3+json")
         .send_json(ureq::serde_json::to_value(&payload)?)
         .context("failed to call GitHub releases API")?;

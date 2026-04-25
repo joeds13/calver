@@ -1,4 +1,4 @@
-# calver
+# AnnoVer
 
 Convention-based [CalVer](https://calver.org) versioning CLI for code projects.
 
@@ -9,10 +9,10 @@ Versions follow the scheme `<year>.<int>` on the main branch and `<year>.<int>-d
 ### Commands
 
 ```
-calver bump     Update project files, commit, tag, push, and create a GitHub release
-calver current  Print the current version (highest git tag)
-calver next     Preview the next version without making any changes
-calver deploy   Update an image tag in a gitops repository to trigger CD
+annover bump     Update project files, commit, tag, push, and create a GitHub release
+annover current  Print the current version (highest git tag)
+annover next     Preview the next version without making any changes
+annover deploy   Update an image tag in a gitops repository to trigger CD
 ```
 
 ### bump
@@ -20,7 +20,7 @@ calver deploy   Update an image tag in a gitops repository to trigger CD
 Run in any project that has a recognised version file (see [Supported files](#supported-files)):
 
 ```sh
-calver bump
+annover bump
 ```
 
 On `main` this produces `2026.1`, `2026.2`, … On any other branch it produces `2026.1-dev1`, `2026.1-dev2`, … (based on what the next main release would be).
@@ -41,10 +41,10 @@ A `GITHUB_TOKEN` (or `GH_TOKEN`) environment variable is required to create rele
 Updates an image tag in a checked-out gitops repository and pushes the result, intended to be called from CI after building a new container image.
 
 ```sh
-calver deploy --image ghcr.io/owner/app --tag 2026.4
+annover deploy --image ghcr.io/owner/app --tag 2026.4
 ```
 
-When `--file` is omitted, calver searches all YAML files in the working directory for the image name and updates every match it finds. Supported reference patterns:
+When `--file` is omitted, annover searches all YAML files in the working directory for the image name and updates every match it finds. Supported reference patterns:
 
 | Pattern | Example |
 |---|---|
@@ -55,12 +55,12 @@ When `--file` is omitted, calver searches all YAML files in the working director
 To target a specific file:
 
 ```sh
-calver deploy --image ghcr.io/owner/app --tag 2026.4 --file apps/myapp/kustomization.yaml
+annover deploy --image ghcr.io/owner/app --tag 2026.4 --file apps/myapp/kustomization.yaml
 ```
 
 ### Supported files
 
-`calver bump` detects and updates all of the following that exist in the working directory:
+`annover bump` detects and updates all of the following that exist in the working directory:
 
 | File | Field |
 |---|---|
@@ -68,7 +68,7 @@ calver deploy --image ghcr.io/owner/app --tag 2026.4 --file apps/myapp/kustomiza
 | `package.json` | `version` |
 | `pyproject.toml` | `[project] version` or `[tool.poetry] version` |
 | `Chart.yaml` | `appVersion` |
-| `.calver` / `VERSION` | plain text |
+| `.annover` / `VERSION` | plain text |
 
 ### Installation
 
@@ -77,19 +77,19 @@ calver deploy --image ghcr.io/owner/app --tag 2026.4 --file apps/myapp/kustomiza
 ```toml
 # mise.toml
 [tools]
-"ubi:joeds13/calver" = "latest"
+"ubi:joeds13/annover" = "latest"
 ```
 
 **Cargo**:
 
 ```sh
-cargo install calver
+cargo install annover
 ```
 
 ### GitHub Action
 
 ```yaml
-- uses: joeds13/calver@main
+- uses: joeds13/annover@main
   with:
     token: ${{ secrets.GITHUB_TOKEN }}
 ```
@@ -105,20 +105,20 @@ jobs:
           fetch-depth: 0   # tags are needed to compute the next version
 
       - name: Bump version
-        id: calver
-        uses: joeds13/calver@main
+        id: annover
+        uses: joeds13/annover@main
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      # build & push your Docker image here, tagged ${{ steps.calver.outputs.version }}
+      # build & push your Docker image here, tagged ${{ steps.annover.outputs.version }}
 
       - name: Update gitops repo
-        uses: joeds13/calver@main
+        uses: joeds13/annover@main
         with:
           repository: you/gitops
           token: ${{ secrets.GITOPS_TOKEN }}
           image: ghcr.io/you/app
-          tag: ${{ steps.calver.outputs.version }}
+          tag: ${{ steps.annover.outputs.version }}
 ```
 
 ---
@@ -128,8 +128,8 @@ jobs:
 **Prerequisites:** Rust stable (≥ 1.86), mise.
 
 ```sh
-git clone https://github.com/joeds13/calver
-cd calver
+git clone https://github.com/joeds13/annover
+cd annover
 mise install        # installs Rust stable
 ```
 
@@ -149,7 +149,7 @@ mise run check      # fmt + lint + test
 src/
   lib.rs            public API (compute_next_version, current_version)
   main.rs           CLI definitions and command dispatch
-  version.rs        CalVer type — parsing, ordering, next-version logic
+  version.rs        AnnoVer type — parsing, ordering, next-version logic
   git.rs            git operations (shells out to git)
   github.rs         GitHub releases API
   gitops.rs         image-tag update logic for gitops YAML files

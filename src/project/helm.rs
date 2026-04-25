@@ -2,7 +2,7 @@ use anyhow::Result;
 use regex::Regex;
 use std::path::{Path, PathBuf};
 
-use crate::version::CalVer;
+use crate::version::AnnoVer;
 
 use super::ProjectFile;
 
@@ -22,13 +22,13 @@ impl ProjectFile for HelmFile {
         &self.path
     }
 
-    fn current_version(&self) -> Result<Option<CalVer>> {
+    fn current_version(&self) -> Result<Option<AnnoVer>> {
         let raw = std::fs::read_to_string(&self.path)?;
         let ver = raw.lines().find_map(parse_app_version_line);
         Ok(ver)
     }
 
-    fn update_version(&self, version: &CalVer) -> Result<()> {
+    fn update_version(&self, version: &AnnoVer) -> Result<()> {
         let raw = std::fs::read_to_string(&self.path)?;
         let re = Regex::new(r"^(appVersion:\s*)(.+)$")?;
         let new_ver = version.to_string();
@@ -56,9 +56,9 @@ impl ProjectFile for HelmFile {
     }
 }
 
-fn parse_app_version_line(line: &str) -> Option<CalVer> {
+fn parse_app_version_line(line: &str) -> Option<AnnoVer> {
     let value = line.strip_prefix("appVersion:")?.trim();
     // Strip optional surrounding quotes
     let value = value.trim_matches('"').trim_matches('\'');
-    CalVer::parse(value)
+    AnnoVer::parse(value)
 }

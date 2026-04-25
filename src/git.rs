@@ -1,7 +1,7 @@
 use anyhow::{Context, Result};
 use std::process::Command;
 
-use crate::version::CalVer;
+use crate::version::AnnoVer;
 
 fn git(args: &[&str]) -> Result<String> {
     let output = Command::new("git")
@@ -40,24 +40,24 @@ pub fn is_main_branch(branch: &str) -> bool {
     matches!(branch, "main" | "master")
 }
 
-/// All calver-formatted tags in the repo, sorted ascending.
-pub fn version_tags() -> Result<Vec<CalVer>> {
+/// All annover-formatted tags in the repo, sorted ascending.
+pub fn version_tags() -> Result<Vec<AnnoVer>> {
     let raw = git(&["tag", "--list"])?;
-    let mut versions: Vec<CalVer> = raw
+    let mut versions: Vec<AnnoVer> = raw
         .lines()
-        .filter_map(|t| CalVer::parse(t.trim()))
+        .filter_map(|t| AnnoVer::parse(t.trim()))
         .collect();
     versions.sort();
     Ok(versions)
 }
 
 /// Highest release (non-dev) tag.
-pub fn latest_release_tag(tags: &[CalVer]) -> Option<&CalVer> {
+pub fn latest_release_tag(tags: &[AnnoVer]) -> Option<&AnnoVer> {
     tags.iter().filter(|v| !v.is_dev()).max()
 }
 
 /// Highest dev tag matching the given base version.
-pub fn latest_dev_tag<'a>(tags: &'a [CalVer], base: &CalVer) -> Option<&'a CalVer> {
+pub fn latest_dev_tag<'a>(tags: &'a [AnnoVer], base: &AnnoVer) -> Option<&'a AnnoVer> {
     tags.iter()
         .filter(|v| v.is_dev() && v.year == base.year && v.increment == base.increment)
         .max()
@@ -82,7 +82,7 @@ pub fn create_commit(message: &str) -> Result<()> {
 }
 
 /// Create an annotated tag at HEAD.
-pub fn create_tag(version: &CalVer) -> Result<()> {
+pub fn create_tag(version: &AnnoVer) -> Result<()> {
     let tag = version.to_string();
     let msg = format!("Release {tag}");
     git(&["tag", "--annotate", &tag, "--message", &msg])?;
@@ -90,7 +90,7 @@ pub fn create_tag(version: &CalVer) -> Result<()> {
 }
 
 /// Push a tag to origin.
-pub fn push_tag(version: &CalVer) -> Result<()> {
+pub fn push_tag(version: &AnnoVer) -> Result<()> {
     git(&["push", "origin", &version.to_string()])?;
     Ok(())
 }
@@ -140,7 +140,7 @@ fn split_owner_repo(path: &str) -> Result<(String, String)> {
 
 /// Returns the configured git user name and email for commit authorship.
 pub fn user_identity() -> (String, String) {
-    let name = git(&["config", "user.name"]).unwrap_or_else(|_| "calver".to_string());
-    let email = git(&["config", "user.email"]).unwrap_or_else(|_| "calver@localhost".to_string());
+    let name = git(&["config", "user.name"]).unwrap_or_else(|_| "annover".to_string());
+    let email = git(&["config", "user.email"]).unwrap_or_else(|_| "annover@localhost".to_string());
     (name, email)
 }
