@@ -49,9 +49,7 @@ pub fn update_image_in_content(content: &str, image: &str, tag: &str) -> Result<
         }
         // Pattern 3: image:oldtag inline
         if tag_re.is_match(line) {
-            let new = tag_re
-                .replace_all(line, format!("${{1}}{tag}"))
-                .to_string();
+            let new = tag_re.replace_all(line, format!("${{1}}{tag}")).to_string();
             if new != *line {
                 *line = new;
                 changed = true;
@@ -186,7 +184,10 @@ images:
             update_image_in_content(content, "ghcr.io/owner/app", "2026.4").unwrap();
         assert!(changed);
         assert!(updated.contains("newTag: 2026.4"));
-        assert!(updated.contains("newTag: 1.0"), "other image should be unchanged");
+        assert!(
+            updated.contains("newTag: 1.0"),
+            "other image should be unchanged"
+        );
     }
 
     #[test]
@@ -213,16 +214,14 @@ resources:
     #[test]
     fn no_match_returns_unchanged() {
         let content = "image: ghcr.io/owner/other:2026.1\n";
-        let (_, changed) =
-            update_image_in_content(content, "ghcr.io/owner/app", "2026.4").unwrap();
+        let (_, changed) = update_image_in_content(content, "ghcr.io/owner/app", "2026.4").unwrap();
         assert!(!changed);
     }
 
     #[test]
     fn preserves_trailing_newline() {
         let content = "image: ghcr.io/owner/app:2026.1\n";
-        let (updated, _) =
-            update_image_in_content(content, "ghcr.io/owner/app", "2026.4").unwrap();
+        let (updated, _) = update_image_in_content(content, "ghcr.io/owner/app", "2026.4").unwrap();
         assert!(updated.ends_with('\n'));
     }
 }

@@ -24,9 +24,7 @@ impl ProjectFile for HelmFile {
 
     fn current_version(&self) -> Result<Option<CalVer>> {
         let raw = std::fs::read_to_string(&self.path)?;
-        let ver = raw
-            .lines()
-            .find_map(|line| parse_app_version_line(line));
+        let ver = raw.lines().find_map(|line| parse_app_version_line(line));
         Ok(ver)
     }
 

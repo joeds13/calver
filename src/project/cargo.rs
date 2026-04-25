@@ -28,6 +28,8 @@ impl ProjectFile for CargoFile {
             .get("package")
             .and_then(|p| p.get("version"))
             .and_then(|v| v.as_str())
+            // Cargo requires semver, so strip the mandatory `.0` patch suffix before parsing.
+            .map(|s| s.strip_suffix(".0").unwrap_or(s))
             .and_then(CalVer::parse);
         Ok(ver)
     }
@@ -35,7 +37,8 @@ impl ProjectFile for CargoFile {
     fn update_version(&self, version: &CalVer) -> Result<()> {
         let raw = std::fs::read_to_string(&self.path)?;
         let mut doc: toml_edit::DocumentMut = raw.parse().context("invalid Cargo.toml")?;
-        doc["package"]["version"] = toml_edit::value(version.to_string());
+        // Cargo requires three-component semver; append `.0` as the patch version.
+        doc["package"]["version"] = toml_edit::value(format!("{version}.0"));
         std::fs::write(&self.path, doc.to_string())?;
         Ok(())
     }

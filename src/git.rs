@@ -94,8 +94,7 @@ pub fn push_branch() -> Result<()> {
 ///
 /// Handles both SSH (`git@github.com:owner/repo.git`) and HTTPS forms.
 pub fn repo_info() -> Result<(String, String)> {
-    let url = git(&["remote", "get-url", "origin"])
-        .context("no origin remote found")?;
+    let url = git(&["remote", "get-url", "origin"]).context("no origin remote found")?;
 
     // Strip trailing .git
     let url = url.strip_suffix(".git").unwrap_or(&url);

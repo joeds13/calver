@@ -1,6 +1,7 @@
 [package]
 name = "calver"
-version = "2026.1"
+version = "2026.1.0"
+edition = "2021"
 description = "Convention-based CalVer versioning CLI for code projects"
 license = "MIT"
 keywords = ["versioning", "calver", "semver", "release", "cli"]

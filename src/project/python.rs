@@ -43,11 +43,7 @@ impl ProjectFile for PythonFile {
         let mut doc: toml_edit::DocumentMut = raw.parse().context("invalid pyproject.toml")?;
         let ver_str = version.to_string();
 
-        if doc
-            .get("project")
-            .and_then(|p| p.get("version"))
-            .is_some()
-        {
+        if doc.get("project").and_then(|p| p.get("version")).is_some() {
             doc["project"]["version"] = toml_edit::value(ver_str);
         } else if doc
             .get("tool")

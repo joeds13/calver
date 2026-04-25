@@ -14,7 +14,11 @@ pub struct CalVer {
 
 impl CalVer {
     pub fn new(year: u32, increment: u32, dev: Option<u32>) -> Self {
-        Self { year, increment, dev }
+        Self {
+            year,
+            increment,
+            dev,
+        }
     }
 
     /// Parse a version string, accepting an optional leading `v`.
@@ -61,10 +65,7 @@ impl CalVer {
     /// `base` is what the next main release will be.
     /// `latest_dev` is the highest dev tag already existing for that base.
     pub fn next_dev(base: &CalVer, latest_dev: Option<&CalVer>) -> Self {
-        let dev_n = latest_dev
-            .and_then(|v| v.dev)
-            .map(|n| n + 1)
-            .unwrap_or(1);
+        let dev_n = latest_dev.and_then(|v| v.dev).map(|n| n + 1).unwrap_or(1);
         Self::new(base.year, base.increment, Some(dev_n))
     }
 }
