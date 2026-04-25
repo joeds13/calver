@@ -94,11 +94,58 @@ fn main() -> Result<()> {
     }
 }
 
+// ── helpers ──────────────────────────────────────────────────────────────────
+
+/// Checks for uncommitted changes and either prompts the user to continue or
+/// exits. In non-interactive environments (CI, piped stdin) it always exits so
+/// the pipeline fails explicitly rather than silently including stray changes.
+fn check_working_tree_clean() -> Result<()> {
+    use std::io::{IsTerminal, Write};
+
+    let dirty = calver::git::dirty_files()?;
+    if dirty.is_empty() {
+        return Ok(());
+    }
+
+    eprintln!("{} uncommitted changes detected:", "warning:".yellow().bold());
+    for line in &dirty {
+        eprintln!("  {}", line.dimmed());
+    }
+    eprintln!();
+
+    if !std::io::stdin().is_terminal() {
+        anyhow::bail!(
+            "working tree is not clean — commit or stash changes before bumping, \
+             or run with --dry-run to preview"
+        );
+    }
+
+    eprint!(
+        "{}",
+        "Include these changes in the bump commit? [y/N] ".yellow()
+    );
+    std::io::stderr().flush()?;
+
+    let mut input = String::new();
+    std::io::stdin().read_line(&mut input)?;
+
+    if matches!(input.trim().to_lowercase().as_str(), "y" | "yes") {
+        Ok(())
+    } else {
+        anyhow::bail!("aborted — commit or stash changes and try again")
+    }
+}
+
 // ── bump ─────────────────────────────────────────────────────────────────────
 
 fn cmd_bump(args: BumpArgs) -> Result<()> {
     let cwd = std::env::current_dir()?;
     let push = !args.no_push && args.push;
+
+    // Warn about uncommitted changes before doing anything irreversible.
+    if !args.dry_run {
+        check_working_tree_clean()?;
+    }
 
     let branch = calver::git::current_branch()?;
     let next = calver::compute_next_version()?;

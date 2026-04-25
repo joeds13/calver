@@ -63,6 +63,17 @@ pub fn latest_dev_tag<'a>(tags: &'a [CalVer], base: &CalVer) -> Option<&'a CalVe
         .max()
 }
 
+/// Returns tracked files with staged or unstaged changes (excludes untracked files).
+pub fn dirty_files() -> Result<Vec<String>> {
+    let raw = git(&["status", "--porcelain"])?;
+    let files = raw
+        .lines()
+        .filter(|l| !l.starts_with("??"))
+        .map(str::to_owned)
+        .collect();
+    Ok(files)
+}
+
 /// Stage all tracked modified files and create a commit.
 pub fn create_commit(message: &str) -> Result<()> {
     git(&["add", "-u"])?;
