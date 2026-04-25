@@ -196,7 +196,7 @@ fn cmd_bump(args: BumpArgs) -> Result<()> {
         println!("  pushed branch and tag to origin");
 
         if !args.no_release {
-            if let Some(token) = annover::github::resolve_token() {
+            if let Some(token) = annover::github::resolve_token_or_prompt() {
                 match annover::git::repo_info() {
                     Ok((owner, repo)) => {
                         let body = release_body(&next);
@@ -208,10 +208,7 @@ fn cmd_bump(args: BumpArgs) -> Result<()> {
                     Err(e) => eprintln!("{} resolving repo: {e}", "warning:".yellow()),
                 }
             } else {
-                println!(
-                    "  {} GITHUB_TOKEN not set — skipping release",
-                    "note:".dimmed()
-                );
+                println!("  skipping release");
             }
         }
     }

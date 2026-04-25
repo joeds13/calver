@@ -57,3 +57,30 @@ pub fn resolve_token() -> Option<String> {
         .ok()
         .filter(|t| !t.is_empty())
 }
+
+/// Resolve a GitHub token, falling back to an interactive prompt in a terminal.
+/// The pasted token is never written to disk or environment.
+pub fn resolve_token_or_prompt() -> Option<String> {
+    use std::io::{IsTerminal, Write};
+
+    if let Some(token) = resolve_token() {
+        return Some(token);
+    }
+
+    if !std::io::stdin().is_terminal() {
+        return None;
+    }
+
+    eprint!("  paste GitHub token to create a release (Enter to skip): ");
+    std::io::stderr().flush().ok()?;
+
+    let mut input = String::new();
+    std::io::stdin().read_line(&mut input).ok()?;
+
+    let token = input.trim().to_string();
+    if token.is_empty() {
+        None
+    } else {
+        Some(token)
+    }
+}
