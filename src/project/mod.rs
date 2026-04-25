@@ -1,5 +1,7 @@
 pub mod cargo;
+pub mod go;
 pub mod helm;
+pub mod kustomization;
 pub mod npm;
 pub mod plain;
 pub mod python;
@@ -24,6 +26,11 @@ pub fn detect_all(dir: &Path) -> Vec<Box<dyn ProjectFile>> {
         Box::new(npm::NpmFile::new(dir.join("package.json"))),
         Box::new(python::PythonFile::new(dir.join("pyproject.toml"))),
         Box::new(helm::HelmFile::new(dir.join("Chart.yaml"))),
+        Box::new(kustomization::KustomizationFile::new(
+            dir.join("kustomization.yaml"),
+        )),
+        Box::new(go::GoFile::new(dir.join("main.go"))),
+        Box::new(go::GoFile::new(dir.join("cmd/main.go"))),
         Box::new(plain::PlainFile::new(dir.join(".annover"))),
         Box::new(plain::PlainFile::new(dir.join("VERSION"))),
     ];
