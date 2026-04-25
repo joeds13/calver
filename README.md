@@ -2,6 +2,8 @@
 
 Convention-based [CalVer](https://calver.org) versioning CLI for code projects.
 
+Named doubly: first as a differentiator from CalVer as we only use the year and "anno" is Latin for "in the year"; and also because it sounds a bit like "another" which is apt as it's for bumping an incrementing version to the next.
+
 Versions follow the scheme `<year>.<int>` on the main branch and `<year>.<int>-dev<int>` on all other branches. Git tags are the source of truth. One command updates every version file in the project, commits as the current user, pushes, and creates a GitHub release.
 
 ## Usage
