@@ -1,6 +1,7 @@
 [tools]
-rust = "stable"
 fnox = "latest"
+prek = "latest"
+rust = "stable"
 
 [plugins]
 fnox-env = "https://github.com/jdx/mise-env-fnox"
@@ -30,8 +31,14 @@ run = "cargo clippy -- -D warnings"
 [tasks.fmt]
 run = "cargo fmt"
 
+[tasks."prek"]
+run = "prek run --all-files"
+
 [tasks.check]
-depends = ["fmt", "lint", "test"]
+run = "prek run --all-files"
+
+[tasks.actions-up]
+run = "npx -y actions-up -y"
 
 # ── Installing calver in your project ────────────────────────────────────────
 #

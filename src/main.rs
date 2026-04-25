@@ -107,7 +107,10 @@ fn check_working_tree_clean() -> Result<()> {
         return Ok(());
     }
 
-    eprintln!("{} uncommitted changes detected:", "warning:".yellow().bold());
+    eprintln!(
+        "{} uncommitted changes detected:",
+        "warning:".yellow().bold()
+    );
     for line in &dirty {
         eprintln!("  {}", line.dimmed());
     }
