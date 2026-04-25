@@ -65,7 +65,7 @@ pub fn update_image_in_content(content: &str, image: &str, tag: &str) -> Result<
 }
 
 /// State-machine pass to update `newTag:` in a kustomize images block.
-fn apply_kustomize_new_tag(lines: &mut Vec<String>, image: &str, tag: &str) -> Result<bool> {
+fn apply_kustomize_new_tag(lines: &mut [String], image: &str, tag: &str) -> Result<bool> {
     let name_re = Regex::new(&format!(r"(?:^|\s)-?\s*name:\s+{}", regex::escape(image)))?;
     let new_tag_re = Regex::new(r"^(\s*newTag:\s*)(.+)$")?;
 
