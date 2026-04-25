@@ -1,6 +1,6 @@
 [package]
 name = "annover"
-version = "2026.9.0"
+version = "2026.10.0"
 edition = "2021"
 description = "Convention-based AnnoVer versioning CLI for code projects"
 license = "MIT"
