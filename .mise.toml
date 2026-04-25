@@ -1,8 +1,15 @@
-# Dev environment for working on calver itself.
-# To install calver *into your project*, see the usage section below.
-
 [tools]
 rust = "stable"
+fnox = "latest"
+
+[plugins]
+fnox-env = "https://github.com/jdx/mise-env-fnox"
+
+[env]
+_.fnox-env = { tools = true }
+
+# Dev environment for working on calver itself.
+# To install calver *into your project*, see the usage section below.
 
 [tasks.build]
 run = "cargo build"
