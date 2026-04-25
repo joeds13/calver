@@ -1,0 +1,166 @@
+name: 'calver'
+description: 'CalVer versioning — bump releases or update image tags in a gitops repository'
+author: 'joe@stringer.sh'
+
+branding:
+  icon: 'tag'
+  color: 'green'
+
+inputs:
+  # ── Deploy mode (triggered when 'image' is set) ───────────────────────────
+  repository:
+    description: >
+      GitOps repository to update (owner/repo).
+      When set alongside 'image', the action runs in deploy mode:
+      it checks out this repo, updates the image tag, commits, and pushes.
+    required: false
+    default: ''
+
+  token:
+    description: >
+      GitHub token. In bump mode this is used to push tags and create releases
+      (defaults to the built-in GITHUB_TOKEN). In deploy mode this must be a
+      PAT with write access to the gitops repository.
+    required: false
+    default: ${{ github.token }}
+
+  image:
+    description: >
+      Container image name to update in the gitops repo (e.g. ghcr.io/owner/app).
+      Setting this input activates deploy mode.
+    required: false
+    default: ''
+
+  tag:
+    description: 'New image tag to deploy (e.g. 2026.4).'
+    required: false
+    default: ''
+
+  path:
+    description: >
+      Local directory name to check the gitops repo out into.
+      Only used in deploy mode.
+    required: false
+    default: '_calver_gitops'
+
+  file:
+    description: >
+      Specific file (relative to the gitops repo root) to update.
+      When omitted, calver searches all YAML files for the image reference.
+    required: false
+    default: ''
+
+  # ── Bump mode ─────────────────────────────────────────────────────────────
+  no-release:
+    description: 'Skip creating a GitHub release (bump mode only).'
+    required: false
+    default: 'false'
+
+  dry-run:
+    description: 'Print what would happen without making any changes.'
+    required: false
+    default: 'false'
+
+  version:
+    description: 'calver CLI version to install. Defaults to "latest".'
+    required: false
+    default: 'latest'
+
+outputs:
+  version:
+    description: >
+      In bump mode: the version that was created.
+      In deploy mode: the tag that was deployed.
+    value: ${{ steps.output.outputs.version }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Install calver
+      shell: bash
+      env:
+        CALVER_VERSION: ${{ inputs.version }}
+        GH_TOKEN: ${{ inputs.token }}
+      run: |
+        set -euo pipefail
+        REPO="joeds13/calver"
+        if [ "${CALVER_VERSION}" = "latest" ]; then
+          CALVER_VERSION=$(gh release view --repo "${REPO}" --json tagName -q .tagName)
+        fi
+        OS=$(uname -s | tr '[:upper:]' '[:lower:]')
+        ARCH=$(uname -m)
+        case "${ARCH}" in
+          x86_64)        ARCH="x86_64" ;;
+          aarch64|arm64) ARCH="aarch64" ;;
+          *) echo "Unsupported architecture: ${ARCH}"; exit 1 ;;
+        esac
+        case "${OS}" in
+          linux)  TARGET="${ARCH}-unknown-linux-musl" ;;
+          darwin) TARGET="${ARCH}-apple-darwin" ;;
+          *) echo "Unsupported OS: ${OS}"; exit 1 ;;
+        esac
+        ARCHIVE="calver-${CALVER_VERSION}-${TARGET}.tar.gz"
+        URL="https://github.com/${REPO}/releases/download/${CALVER_VERSION}/${ARCHIVE}"
+        curl -fsSL "${URL}" | tar -xz -C /usr/local/bin calver
+        chmod +x /usr/local/bin/calver
+        calver --version
+
+    # ── Deploy mode ───────────────────────────────────────────────────────────
+
+    - name: Checkout gitops repo
+      if: ${{ inputs.image != '' }}
+      uses: actions/checkout@v4
+      with:
+        repository: ${{ inputs.repository }}
+        token: ${{ inputs.token }}
+        path: ${{ inputs.path }}
+
+    - name: Configure git identity (deploy)
+      if: ${{ inputs.image != '' }}
+      shell: bash
+      working-directory: ${{ inputs.path }}
+      run: |
+        git config user.name  "github-actions[bot]"
+        git config user.email "github-actions[bot]@users.noreply.github.com"
+
+    - name: Run calver deploy
+      if: ${{ inputs.image != '' }}
+      shell: bash
+      working-directory: ${{ inputs.path }}
+      run: |
+        ARGS="--image ${{ inputs.image }} --tag ${{ inputs.tag }}"
+        [ -n "${{ inputs.file }}" ] && ARGS="${ARGS} --file ${{ inputs.file }}"
+        [ "${{ inputs.dry-run }}" = "true" ] && ARGS="${ARGS} --dry-run"
+        calver deploy ${ARGS}
+
+    # ── Bump mode ─────────────────────────────────────────────────────────────
+
+    - name: Configure git identity (bump)
+      if: ${{ inputs.image == '' }}
+      shell: bash
+      run: |
+        git config user.name  "github-actions[bot]"
+        git config user.email "github-actions[bot]@users.noreply.github.com"
+
+    - name: Run calver bump
+      if: ${{ inputs.image == '' }}
+      shell: bash
+      env:
+        GITHUB_TOKEN: ${{ inputs.token }}
+      run: |
+        ARGS=""
+        [ "${{ inputs.no-release }}" = "true" ] && ARGS="${ARGS} --no-release"
+        [ "${{ inputs.dry-run }}"   = "true" ] && ARGS="${ARGS} --dry-run"
+        calver bump ${ARGS}
+
+    # ── Output ────────────────────────────────────────────────────────────────
+
+    - name: Set output version
+      id: output
+      shell: bash
+      run: |
+        if [ -n "${{ inputs.image }}" ]; then
+          echo "version=${{ inputs.tag }}" >> "$GITHUB_OUTPUT"
+        else
+          echo "version=$(calver current)" >> "$GITHUB_OUTPUT"
+        fi

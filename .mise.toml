@@ -1,0 +1,37 @@
+# Dev environment for working on calver itself.
+# To install calver *into your project*, see the usage section below.
+
+[tools]
+rust = "stable"
+
+[tasks.build]
+run = "cargo build"
+
+[tasks.test]
+run = "cargo test"
+
+[tasks.release]
+run = "cargo build --release"
+
+[tasks.lint]
+run = "cargo clippy -- -D warnings"
+
+[tasks.fmt]
+run = "cargo fmt"
+
+[tasks.check]
+depends = ["fmt", "lint", "test"]
+
+# ── Installing calver in your project ────────────────────────────────────────
+#
+# Option 1 — cargo (from crates.io once published):
+#   [tools]
+#   "cargo:calver" = "latest"
+#
+# Option 2 — ubi (GitHub releases binary, fastest):
+#   [tools]
+#   "ubi:jstringer/calver" = "latest"
+#
+# Option 3 — local cargo install during development:
+#   [tools]
+#   "cargo:calver" = { path = "/path/to/calver" }
