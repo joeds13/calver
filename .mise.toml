@@ -1,5 +1,6 @@
 [tools]
 fnox = "latest"
+"github:joeds13/annover" = "latest"
 prek = "latest"
 rust = "stable"
 
@@ -15,24 +16,24 @@ _.fnox-env = { tools = true }
 [tasks.build]
 run = "cargo build"
 
+[tasks."build:release"]
+run = "cargo build --release"
+
 [tasks.test]
 run = "cargo test"
 
 [tasks.release]
-run = "cargo build --release"
+run = "annover bump"
 
-[tasks."release:run"]
+[tasks.run]
 run = "./target/release/annover"
-depends = ["release"]
+depends = ["build:release"]
 
 [tasks.lint]
 run = "cargo clippy -- -D warnings"
 
 [tasks.fmt]
 run = "cargo fmt"
-
-[tasks."prek"]
-run = "prek run --all-files"
 
 [tasks.check]
 run = "prek run --all-files"
