@@ -164,7 +164,7 @@ fn cmd_bump(args: BumpArgs) -> Result<()> {
     let project_files = annover::project::detect_all(&cwd);
     if project_files.is_empty() {
         eprintln!(
-            "{} no project files found (Cargo.toml, package.json, pyproject.toml, Chart.yaml, .annover, VERSION)",
+            "{} no project files found (Cargo.toml, package.json, pyproject.toml, Chart.yaml, VERSION, kustomization.yaml, *.go)",
             "warning:".yellow()
         );
     }
