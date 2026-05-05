@@ -4,7 +4,7 @@ use std::path::{Path, PathBuf};
 
 /// Updates all occurrences of an image reference to a new tag within file content.
 ///
-/// Three patterns are supported (all are applied, any that match are updated):
+/// Four patterns are supported (all are applied, any that match are updated):
 ///
 /// 1. **Kustomize images block** — `newTag:` on the line following `name: <image>`:
 ///    ```yaml
@@ -23,6 +23,14 @@ use std::path::{Path, PathBuf};
 ///    image: ghcr.io/owner/app:2026.3
 ///    ```
 ///
+/// 4. **Argo CD Application `targetRevision`** — the `targetRevision` field that
+///    is a sibling of a `repoURL` containing the image or its `owner/repo` path:
+///    ```yaml
+///    source:
+///      repoURL: https://github.com/owner/app
+///      targetRevision: "2026.3"
+///    ```
+///
 /// Returns `(updated_content, was_changed)`.
 pub fn update_image_in_content(content: &str, image: &str, tag: &str) -> Result<(String, bool)> {
     let mut lines: Vec<String> = content.lines().map(str::to_owned).collect();
@@ -30,6 +38,9 @@ pub fn update_image_in_content(content: &str, image: &str, tag: &str) -> Result<
 
     // Pattern 1: kustomize newTag — requires tracking state across lines
     changed |= apply_kustomize_new_tag(&mut lines, image, tag)?;
+
+    // Pattern 4: Argo CD Application targetRevision — requires tracking state across lines
+    changed |= apply_target_revision(&mut lines, image, tag)?;
 
     // Pattern 2 & 3: single-line replacements
     let ref_re = Regex::new(r#"(ref=)[^\s"'&>]+"#)?;
@@ -121,6 +132,9 @@ fn apply_kustomize_new_tag(lines: &mut [String], image: &str, tag: &str) -> Resu
 /// the list of paths that were actually changed.
 pub fn update_files_in_dir(dir: &Path, image: &str, tag: &str) -> Result<Vec<PathBuf>> {
     let mut changed = Vec::new();
+    // Strip the registry prefix so that Argo CD Application files whose
+    // `repoURL` only contains the `owner/repo` portion are also considered.
+    let image_repo = image.find('/').map(|i| &image[i + 1..]).unwrap_or("");
 
     for entry in walkdir(dir) {
         let path = entry?;
@@ -132,7 +146,9 @@ pub fn update_files_in_dir(dir: &Path, image: &str, tag: &str) -> Result<Vec<Pat
         let content = std::fs::read_to_string(&path)
             .with_context(|| format!("reading {}", path.display()))?;
 
-        if !content.contains(image) {
+        let content_has_match =
+            content.contains(image) || (!image_repo.is_empty() && content.contains(image_repo));
+        if !content_has_match {
             continue;
         }
 
@@ -141,6 +157,72 @@ pub fn update_files_in_dir(dir: &Path, image: &str, tag: &str) -> Result<Vec<Pat
             std::fs::write(&path, updated)
                 .with_context(|| format!("writing {}", path.display()))?;
             changed.push(path);
+        }
+    }
+
+    Ok(changed)
+}
+
+/// State-machine pass to update `targetRevision:` in Argo CD `Application`
+/// resources where the sibling `repoURL` field matches `image` (or its
+/// `owner/repo` suffix after stripping the registry host).
+///
+/// Handles both single-source (`source:`) and multi-source (`sources:`) shapes.
+fn apply_target_revision(lines: &mut [String], image: &str, tag: &str) -> Result<bool> {
+    let image_repo = image.find('/').map(|i| &image[i + 1..]).unwrap_or("");
+    // Match `targetRevision:` with optional surrounding quotes (single, double,
+    // or none) so we preserve whatever quoting style was already in use.
+    let revision_re = Regex::new(r#"^(\s*targetRevision:\s*["']?)([^"'\s]+)(["']?\s*)$"#)?;
+
+    let mut changed = false;
+    let mut looking = false;
+    // Column position of the 'r' in `repoURL` — used as the reference indent
+    // level so that both `repoURL:` (single source) and `- repoURL:` (list
+    // item in `sources:`) work correctly.
+    let mut base_col: usize = 0;
+
+    for line in lines.iter_mut() {
+        if !looking {
+            let has_image = line.contains(image);
+            let has_repo = !image_repo.is_empty() && line.contains(image_repo);
+            if (has_image || has_repo) && line.contains("repoURL:") {
+                looking = true;
+                base_col = line.find("repoURL").unwrap_or(0);
+            }
+            continue;
+        }
+
+        // --- inside the "looking for targetRevision" state ---
+        let trimmed = line.trim();
+
+        // Skip blank lines and comments.
+        if trimmed.is_empty() || trimmed.starts_with('#') {
+            continue;
+        }
+
+        let indent = line.len() - line.trim_start().len();
+
+        // A line whose text starts at a lower column than `repoURL` means we
+        // have left the enclosing block without finding `targetRevision`.
+        if indent < base_col {
+            looking = false;
+            // This line may itself be a new `repoURL` match; don't skip it.
+            let has_image = line.contains(image);
+            let has_repo = !image_repo.is_empty() && line.contains(image_repo);
+            if (has_image || has_repo) && line.contains("repoURL:") {
+                looking = true;
+                base_col = line.find("repoURL").unwrap_or(0);
+            }
+            continue;
+        }
+
+        if let Some(caps) = revision_re.captures(line) {
+            let new_line = format!("{}{}{}", &caps[1], tag, &caps[3]);
+            if new_line != *line {
+                *line = new_line;
+                changed = true;
+            }
+            looking = false;
         }
     }
 
@@ -247,5 +329,99 @@ resources:
         let content = "image: ghcr.io/owner/app:2026.1\n";
         let (updated, _) = update_image_in_content(content, "ghcr.io/owner/app", "2026.4").unwrap();
         assert!(updated.ends_with('\n'));
+    }
+
+    // ── Pattern 4: Argo CD Application targetRevision ────────────────────────
+
+    #[test]
+    fn argocd_target_revision_double_quoted() {
+        let content = "\
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+spec:
+  source:
+    path: k8s
+    repoURL: https://github.com/owner/app
+    targetRevision: \"2026.1\"
+";
+        let (updated, changed) =
+            update_image_in_content(content, "ghcr.io/owner/app", "2026.4").unwrap();
+        assert!(changed);
+        assert!(
+            updated.contains("targetRevision: \"2026.4\""),
+            "expected double-quoted version to be updated: {updated}"
+        );
+    }
+
+    #[test]
+    fn argocd_target_revision_unquoted() {
+        let content = "\
+spec:
+  source:
+    repoURL: https://github.com/owner/app
+    targetRevision: 2026.1
+";
+        let (updated, changed) =
+            update_image_in_content(content, "ghcr.io/owner/app", "2026.4").unwrap();
+        assert!(changed);
+        assert!(
+            updated.contains("targetRevision: 2026.4"),
+            "expected unquoted version to be updated: {updated}"
+        );
+    }
+
+    #[test]
+    fn argocd_target_revision_only_repo_match() {
+        // The image has a different registry host; only the owner/repo portion
+        // appears in the repoURL — it should still be updated.
+        let content = "\
+spec:
+  source:
+    repoURL: https://github.com/joeds13/raceweek
+    targetRevision: \"2026.1\"
+";
+        let (updated, changed) =
+            update_image_in_content(content, "ghcr.io/joeds13/raceweek", "2026.4").unwrap();
+        assert!(changed);
+        assert!(updated.contains("targetRevision: \"2026.4\""));
+    }
+
+    #[test]
+    fn argocd_target_revision_list_sources() {
+        // Multi-source Application: only the matching repoURL's targetRevision
+        // should be updated.
+        let content = "\
+spec:
+  sources:
+    - repoURL: https://github.com/owner/app
+      targetRevision: \"2026.1\"
+      path: k8s
+    - repoURL: https://github.com/owner/other
+      targetRevision: \"1.0\"
+      path: charts
+";
+        let (updated, changed) =
+            update_image_in_content(content, "ghcr.io/owner/app", "2026.4").unwrap();
+        assert!(changed);
+        assert!(
+            updated.contains("targetRevision: \"2026.4\""),
+            "matching source should be updated: {updated}"
+        );
+        assert!(
+            updated.contains("targetRevision: \"1.0\""),
+            "non-matching source should be unchanged: {updated}"
+        );
+    }
+
+    #[test]
+    fn argocd_target_revision_unrelated_repo_unchanged() {
+        let content = "\
+spec:
+  source:
+    repoURL: https://github.com/owner/completely-different
+    targetRevision: \"2026.1\"
+";
+        let (_, changed) = update_image_in_content(content, "ghcr.io/owner/app", "2026.4").unwrap();
+        assert!(!changed, "unrelated repoURL must not be touched");
     }
 }
